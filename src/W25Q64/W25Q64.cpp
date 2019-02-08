@@ -57,18 +57,18 @@ void W25Q64_setSPIPort(SPIClass& rSPI) {
 
 //
 // フラッシュメモリ W25Q64の利用開始
-// 
+//
 void W25Q64_begin(uint8_t cs, uint32_t frq) {
   cspin = cs;
-  pinMode (cspin, OUTPUT); 
-  W25Q64_deselect(); 
+  pinMode (cspin, OUTPUT);
+  W25Q64_deselect();
   mSPISettings = SPISettings(frq, MSBFIRST, SPI_MODE0);
   mpSPI->begin();
 }
 
 //
 // フラッシュメモリ W25Q64の利用終了
-// 
+//
 void W25Q64_end() {
   W25Q64_powerDown();
   W25Q64_deselect();
@@ -81,7 +81,7 @@ void W25Q64_end() {
 //
 void W25Q64_select() {
   mpSPI->beginTransaction(mSPISettings);
-  digitalWrite(cspin, LOW); 
+  digitalWrite(cspin, LOW);
 }
 
 //
@@ -89,7 +89,7 @@ void W25Q64_select() {
 // フラッシュメモリ操作を有非選択にする
 //
 void W25Q64_deselect() {
-   digitalWrite(cspin, HIGH); 
+   digitalWrite(cspin, HIGH);
    mpSPI->endTransaction();
 }
 
@@ -128,13 +128,13 @@ void W25Q64_readManufacturer(byte* d) {
   mpSPI->transfer(CMD_JEDEC_ID);
   for (byte i =0; i <3; i++) {
     d[i] = mpSPI->transfer(0x00);
-  } 
+  }
   W25Q64_deselect();
 }
 
 //
 // Unique IDの取得
-// d(out): Unique ID 7バイトを返す  
+// d(out): Unique ID 7バイトを返す
 //
 void W25Q64_readUniqieID(byte* d) {
   W25Q64_select();
@@ -146,7 +146,7 @@ void W25Q64_readUniqieID(byte* d) {
   for (byte i =0; i <7; i++) {
     d[i] = mpSPI->transfer(0x00);
   }
- W25Q64_deselect(); 
+ W25Q64_deselect();
 }
 
 //
@@ -165,7 +165,7 @@ boolean W25Q64_IsBusy() {
 }
 
 //
-//　パワーダウン指定 
+//　パワーダウン指定
 //
 void W25Q64_powerDown() {
   W25Q64_select();
@@ -196,18 +196,18 @@ void W25Q64_WriteDisable() {
 // addr(in): 読込開始アドレス (24ビット 0x00000 - 0xFFFFF)
 // n(in):読込データ数
 //
-uint16_t W25Q64_read(uint32_t addr,uint8_t *buf,uint16_t n){ 
+uint16_t W25Q64_read(uint32_t addr,uint8_t *buf,uint16_t n){
   W25Q64_select();
   mpSPI->transfer(CMD_READ_DATA);
   mpSPI->transfer(addr>>16);          // A23-A16
   mpSPI->transfer((addr>>8) & 0xFF);  // A15-A08
   mpSPI->transfer(addr & 0xFF);       // A07-A00
- 
+
   uint16_t i;
   for(i = 0; i<n; i++ ) {
     buf[i] = mpSPI->transfer(0x00);
   }
-  
+
   W25Q64_deselect();
   return i;
 }
@@ -224,12 +224,12 @@ uint16_t W25Q64_fastread(uint32_t addr,uint8_t *buf,uint16_t n) {
   mpSPI->transfer((addr>>8) & 0xFF);  // A15-A08
   mpSPI->transfer(addr & 0xFF);       // A07-A00
   mpSPI->transfer(0x00);              // ダミー
-  
+
   uint16_t i;
   for(i = 0; i<n; i++)
     buf[i] = mpSPI->transfer(0x00);
-  
-  W25Q64_deselect();  
+
+  W25Q64_deselect();
   return i;
 }
 
@@ -246,7 +246,7 @@ boolean W25Q64_eraseSector(uint16_t sect_no, boolean flgwait) {
   addr<<=12;
 
   W25Q64_WriteEnable();
-  W25Q64_select(); 
+  W25Q64_select();
   mpSPI->transfer(CMD_SECTOR_ERASE);
   mpSPI->transfer((addr>>16) & 0xff);
   mpSPI->transfer((addr>>8) & 0xff);
@@ -274,7 +274,7 @@ boolean W25Q64_erase64Block(uint16_t blk_no, boolean flgwait) {
   addr<<=16;
 
   W25Q64_WriteEnable();
-  W25Q64_select(); 
+  W25Q64_select();
   mpSPI->transfer(CMD_BLOCK_ERASE64KB);
   mpSPI->transfer((addr>>16) & 0xff);
   mpSPI->transfer((addr>>8) & 0xff);
@@ -302,8 +302,8 @@ boolean W25Q64_erase32Block(uint16_t blk_no, boolean flgwait) {
   uint32_t addr = blk_no;
   addr<<=15;
 
-  W25Q64_WriteEnable();  
-  W25Q64_select(); 
+  W25Q64_WriteEnable();
+  W25Q64_select();
   mpSPI->transfer(CMD_BLOCK_ERASE32KB);
   mpSPI->transfer((addr>>16) & 0xff);
   mpSPI->transfer((addr>>8) & 0xff);
@@ -314,7 +314,7 @@ boolean W25Q64_erase32Block(uint16_t blk_no, boolean flgwait) {
   while(W25Q64_IsBusy() & flgwait) {
     delay(50);
  }
- 
+
  return true;
 }
 
@@ -325,8 +325,8 @@ boolean W25Q64_erase32Block(uint16_t blk_no, boolean flgwait) {
 //   補足: データシートでは消去に通常 15s 、最大30sかかると記載されている
 //
 boolean W25Q64_eraseAll(boolean flgwait) {
- W25Q64_WriteEnable();  
- W25Q64_select(); 
+ W25Q64_WriteEnable();
+ W25Q64_select();
  mpSPI->transfer(CMD_CHIP_ERASE);
  W25Q64_deselect();
 
@@ -334,29 +334,25 @@ boolean W25Q64_eraseAll(boolean flgwait) {
  while(W25Q64_IsBusy() & flgwait) {
     delay(500);
  }
- 
+
  W25Q64_deselect();
  return true;
 }
 
 //
 // データの書き込み
-// sect_no(in) : セクタ番号(0x00 - 0x7FF) 
-// inaddr(in)  : セクタ内アドレス(0x00-0xFFF)
+// addr(in)    : アドレス
 // data(in)    : 書込みデータ格納アドレス
 // n(in)       : 書込みバイト数(0～256)
 //
-uint16_t W25Q64_pageWrite(uint16_t sect_no, uint16_t inaddr, byte* data, byte n) {
+uint16_t W25Q64_write(uint32_t addr, byte* data, byte n) {
 
-  uint32_t addr = sect_no;
   int i;
-  addr<<=12;
-  addr += inaddr;
 
-  W25Q64_WriteEnable();  
-  
+  W25Q64_WriteEnable();
+
   if (W25Q64_IsBusy()) {
-    return 0;  
+    return 0;
   }
 
   W25Q64_select();
@@ -367,9 +363,9 @@ uint16_t W25Q64_pageWrite(uint16_t sect_no, uint16_t inaddr, byte* data, byte n)
 
   for (i=0; i < n; i++) {
     mpSPI->transfer(data[i]);
-  }  
+  }
   W25Q64_deselect();
   while(W25Q64_IsBusy()) ;
-  
+
   return i;
 }
