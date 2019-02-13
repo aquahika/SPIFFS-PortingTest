@@ -3,12 +3,12 @@
 
 #include "W25Q64/W25Q64.h"
 
-static s32_t my_spiffs_read(u32_t addr, u32_t size, u8_t *dst) {
+s32_t spiffs_hal_read(u32_t addr, u32_t size, u8_t *dst) {
     W25Q64_read(addr,dst,size);
     return SPIFFS_OK;
 }
 
-static s32_t my_spiffs_write(u32_t addr, u32_t size, u8_t *src) {
+s32_t spiffs_hal_write(u32_t addr, u32_t size, u8_t *src) {
     W25Q64_write(addr,src,size);
     return SPIFFS_OK;
 }

@@ -10,7 +10,10 @@
 #include <Arduino.h>
 #include <string.h>
 #include <SPI.h>
+
 #include "src/W25Q64/W25Q64.h"
+#include "src/spiffs/spiffs.h"
+#include "src/spiffs_hal.h"
 
 //
 // 書込みデータのダンプリスト
@@ -63,6 +66,50 @@ void dump(byte *dt, uint32_t n) {
   Serial.println("");
 }
 
+#define LOG_PAGE_SIZE       256
+
+static u8_t spiffs_work_buf[LOG_PAGE_SIZE*2];
+static u8_t spiffs_fds[32*4];
+static u8_t spiffs_cache_buf[(LOG_PAGE_SIZE+32)*4];
+ static spiffs fs;
+
+s32_t my_spiffs_mount() {
+    spiffs_config cfg;
+    cfg.hal_read_f = spiffs_hal_read;
+    cfg.hal_write_f = spiffs_hal_write;
+    cfg.hal_erase_f = spiffs_hal_erase;
+
+    int res = SPIFFS_mount(&fs,
+      &cfg,
+      spiffs_work_buf,
+      spiffs_fds,
+      sizeof(spiffs_fds),
+      spiffs_cache_buf,
+      sizeof(spiffs_cache_buf),
+      0);
+    printf("mount res: %i\n", res);
+
+    return res;
+}
+
+static void test_spiffs() {
+  char buf[12];
+
+  // Surely, I've mounted spiffs before entering here
+
+  spiffs_file fd = SPIFFS_open(&fs, "my_file", SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR, 0);
+  if (SPIFFS_write(&fs, fd, (u8_t *)"Hello world", 12) < 0) printf("errno %i\n", SPIFFS_errno(&fs));
+  SPIFFS_close(&fs, fd);
+
+  fd = SPIFFS_open(&fs, "my_file", SPIFFS_RDWR, 0);
+  if (SPIFFS_read(&fs, fd, (u8_t *)buf, 12) < 0) printf("errno %i\n", SPIFFS_errno(&fs));
+  SPIFFS_close(&fs, fd);
+
+  printf("--> %s <--\n", buf);
+}
+
+
+
 SPIClass *vspi = NULL;
 
 void setup() {
@@ -82,68 +129,16 @@ void setup() {
     W25Q64_setSPIPort(*vspi);
     W25Q64_begin(22);     // フラッシュメモリ利用開始
 
-    // JEDEC IDの取得テスト
-    W25Q64_readManufacturer(buf);
-    Serial.print("JEDEC ID : ");
-    for (byte i=0; i< 3; i++) {
-      Serial.print(buf[i],HEX);
-      Serial.print(" ");
+    s32_t res = my_spiffs_mount();
+    printf("%d\n",res);
+    if(res == SPIFFS_ERR_NOT_A_FS){
+      printf("Formatting");
+      SPIFFS_format(&fs);
+      abort();
     }
-    Serial.println("");
 
-    // Unique IDの取得テスト
-    W25Q64_readUniqieID(buf);
-    Serial.print("Unique ID : ");
-    for (byte i=0; i< 7; i++) {
-      Serial.print(buf[i],HEX);
-      Serial.print(" ");
-    }
-    Serial.println("");
+    test_spiffs();
 
-    // データの読み込み(アドレス0から256バイト取得)
-    memset(buf,0,256);
-    n =  W25Q64_read(0,buf, 256);
-    Serial.print("Read Data: n=");
-    Serial.println(n,DEC);
-    dump(buf,256);
-
-    // 高速データの読み込み(アドレス0から256バイト取得)
-    memset(buf,0,256);
-    n =  W25Q64_fastread(0,buf, 256);
-    Serial.print("Fast Read Data: n=");
-    Serial.println(n,DEC);
-    dump(buf,256);
-
-    // セクタ単位の削除
-    n = W25Q64_eraseSector(0,true);
-    Serial.print("Erase Sector(0): n=");
-    Serial.println(n,DEC);
-    memset(buf,0,256);
-    n =  W25Q64_read (0,buf, 256);
-    dump(buf,256);
-
-    // データ書き込みテスト
-    for (byte i=0; i < 16;i++) {
-      wdata[i]=i;
-    }
-    n =  W25Q64_write(0x30, wdata, 16);
-    Serial.print("page_write(0,10,d,16): n=");
-    Serial.println(n,DEC);
-    memset(buf,0,256);
-    n =  W25Q64_read (0,buf, 256);
-    dump(buf,256);
-
-    // ステータスレジスタ1の取得
-    buf[0] = W25Q64_readStatusReg1();
-    Serial.print("Status Register-1: ");
-    Serial.print(buf[0],BIN);
-    Serial.println("");
-
-    // ステータスレジスタ2の取得
-    buf[0] = W25Q64_readStatusReg2();
-    Serial.print("Status Register-2: ");
-    Serial.print(buf[0],BIN);
-    Serial.println("");
 }
 
 void loop() {
